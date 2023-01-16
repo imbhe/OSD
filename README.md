@@ -1,0 +1,2 @@
+# OSD
+ Optimum Subsampling Designs
