@@ -1,3 +1,90 @@
+
+
+
+
+# Sampling schemes.
+params <- tibble(crit = c("A", "D", "E", rep("c", 3), rep("L", 3), rep("Phi_r", 3)), 
+                 name = c("A", "D", "E", paste0("c", 1:3), paste0("L", 1:3), "Phi0.5", "Phi5", "Phi10"),
+                 p = c(rep(NA, 9), 0.5, 5, 10))
+L <- list(NULL, NULL, NULL, c(1, 0, 0), c(0, 1, 0), c(0, 0, 1), sqrtm(H), sqrtm(H %*% solve(V)), sqrtm(solve(cov.wt(Y, w)$cov)), NULL, NULL, NULL)
+params$L <- L
+params <- crossing(design = c("PO-WR", "PO-WOR"), params, niter = NA, status = NA, A = NA, D = NA, E = NA, c1 = NA, c2 = NA, c3 = NA, L1 = NA, L2 = NA, L3 = NA, Phi05 = NA, Phi5 = NA, Phi10 = NA)
+
+# Find optimal sampling schemes and evaluate performance analytically. 
+for ( i in 1:nrow(params) ) { 
+  opt <- opt_sampling_scheme(n, G, H, w, crit = params$crit[i], L = params$L[[i]], p = params$p[i], design = params$design[i])
+  params$niter[i] <- opt$niter
+  params$status[i] <- opt$status
+  Gamma <- acov(opt$mu, G, H, w, design = params$design[i])
+  params$A[i] <- Phi(Gamma, crit = "A")
+  params$D[i] <- Phi(Gamma, crit = "D")
+  params$E[i] <- Phi(Gamma, crit = "E")
+  params$c1[i] <- Phi(Gamma, crit = "c", L = L[[4]])
+  params$c2[i] <- Phi(Gamma, crit = "c", L = L[[5]])
+  params$c3[i] <- Phi(Gamma, crit = "c", L = L[[6]])
+  params$L1[i] <- Phi(Gamma, crit = "L", L = L[[7]])
+  params$L2[i] <- Phi(Gamma, crit = "L", L = L[[8]])
+  params$L3[i] <- Phi(Gamma, crit = "L", L = L[[9]])
+  params$Phi05[i] <- Phi(Gamma, crit = "Phi_r", r = 0.5)
+  params$Phi5[i] <- Phi(Gamma, crit = "Phi_r", r = 5)
+  params$Phi10[i] <- Phi(Gamma, crit = "Phi_r", r = 10)
+}
+
+# Relative efficiencies.
+res <- params %>% 
+  group_by(design) %>% 
+  mutate(A = min(A) / A, 
+         c1 = min(c1) / c1, 
+         c2 = min(c2) / c2, 
+         c3 = min(c3) / c3,
+         D = exp((min(D) - D) / length(theta0)),
+         E = min(E) / E,
+         L1 = min(L1) / L1,
+         L2 = min(L2) / L2,
+         L3 = min(L3) / L3,
+         Phi05 = min(Phi05) / Phi05,
+         Phi5 = min(Phi5) / Phi5,
+         Phi10 = min(Phi10) / Phi10) %>% 
+  mutate(niter_s = ifelse(status == 0, sprintf("%.0f", niter), "Did not converge")) %>% 
+  ungroup() %>%
+  dplyr::select(design, crit, name, niter, niter_s, everything())
+
+# If optimal sampling scheme could not be found.
+for ( i in 1:nrow(res) ) {
+  if ( res$niter_s[i] == "Did not converge") {
+    res[i, 9:ncol(res)] <- NA
+    if ( res$crit[i] == "E" ) {
+      res$E[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$p[i] == 5 ) {
+      res$Phi5[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$p[i] == 10 ) {
+      res$Phi10[which(res$design == res$design[i])] <- NA
+    }
+  }
+}
+
+save(res, file = "Results/tab4.RData")
+
+
+# Write xtable to file.
+load(file = "Results/tab4.RData")
+res %>% 
+  filter(design == "PO-WR") %>% 
+  dplyr::select(name, niter_s, A, c1, c2, c3, D, E) %>% 
+  dplyr::rename("Optimality criterion" = name,
+                "Number of iterations" = niter_s) %>% 
+  xtable(digits = 2, caption = "", label = "tab:finite_population_inference", align = c("llrrrrrrr")) %>% 
+  print(caption.placement = "top", 
+        table.placement = "ht!", 
+        include.rownames = FALSE, 
+        NA.string="NA",
+        file = "Output/tab4.txt")# Hessian.
+# p[p > (1-1e-12)] <- 1-1e-12
+# H <- matrix(0, length(theta0), length(theta0))
+# for ( i in 1:nrow(X) ) {
+#   H <- H + p[i] * (1 - p[i]) * tcrossprod(X[i, ])
+# }
+
 X <- model.matrix(~ caseID + dec * OEOFF + dec * I(OEOFF^4), data = data)
 ymax <- dat$max_impact_speed
 y <- data$impact_speed0

@@ -1,24 +1,45 @@
+################################################################################
+#
+# File name: Phi.R
+#
+# Author: Henrik Imberg
+#
+# Last edited: 2023-03-17
+#
+# Description: Evaluate Phi-optimality objective function (Table 1, Section 2.3). 
+#
+# INPUT: 
+#   - CovMat      (Approximate) covariance matrix.
+#   - crit        optimality criterion.
+#   - L           L-matrix for linear optimality criteria, including c-optimality. 
+#   - r           r parameter for the Phi_r-optimality criterion.
+#
+# OUTPUT: value of objective function Phi.
+#
+################################################################################
+
 Phi <- function(CovMat, 
-                crit = c("A", "D", "E", "L", "Phi_p"), 
+                crit = c("A", "c", "D", "E", "L", "Phi_r"), 
                 L = NULL, 
-                p = NULL) {
+                r = NULL) {
   
   crit <- match.arg(crit)
-  if ( !is.null(p) && p <= 0 ) { stop("p must be > 0.") }
+  if ( !is.na(r) && !is.null(r) && r <= 0 ) { stop("r must be > 0.") }
+  d <- ncol(CovMat)
   
   if ( crit == "A" ) {
     val <- sum(diag(CovMat))
   } else if ( crit == "D" ) {
-    val <- log(det(CovMat))
+    val <- as.numeric(exp(determinant(CovMat, log = TRUE)$modulus / ncol(CovMat)))
   } else if ( crit == "E" ) {
     val <- max(eigen(CovMat)$values)
-  } else if ( crit == "L" ) {
-    val <-sum(diag(CovMat %*% tcrossprod(L)))
-  } else if ( crit == "Phi_p" ) {
+  } else if ( crit %in% c("c", "L") ) {
+    val <- sum(diag(CovMat %*% tcrossprod(L)))
+  } else if ( crit == "Phi_r" ) {
     eig <- eigen(CovMat)
     P <- eig$vectors
-    D <- diag(eig$values^p)
-    val <- sum(diag(P %*% D %*% t(P)))^{1/p}
+    D <- diag(eig$values^r)
+    val <- sum(diag(P %*% D %*% t(P)))^{1/r}
   }
   
   return(val)

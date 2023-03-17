@@ -1,5 +1,20 @@
+################################################################################
+#
+# File name: main.R
+#
+# Author: Henrik Imberg
+#
+# Last edited: 2023-03-17
+#
+# Description: Main function for the experiments in Section 6.
+# 
+# INPUT: Virtual simulation data stored in the Data folder.
+#
+# OUTPUT: is stored in the Tables folder.
+#
+################################################################################
 
-# Clean-up. ----
+# Clean up. ----
 rm(list = ls())
 cat("\14")
 
@@ -7,15 +22,13 @@ cat("\14")
 # Load packages. ----
 
 library("expm")
-library("magrittr")
-library("Matrix")
 library("sampling")
-library("tictoc")
 library("tidyverse")
+library("xtable")
 
 source("Rscript/acov.R")
-source("Rscript/approx_E_opt.R")
-source("Rscript/opt_sampling_scheme.R")
+source("Rscript/fmt.R")
+source("Rscript/optimise_ss.R")
 source("Rscript/Phi.R")
 
 
@@ -36,371 +49,363 @@ VSdata <- df %>%
   mutate(dec = -acc, 
          crash0 = as.numeric(impact_speed0 > 0),
          crash1 = as.numeric(impact_speed1 > 0),
-         impact_speed_reduction = impact_speed1 - impact_speed0,
-         injury_risk_reduction = injury_risk1 - injury_risk0,
+         impact_speed_reduction = impact_speed0 - impact_speed1,
+         injury_risk_reduction = injury_risk0 - injury_risk1,
          crash_avoidance = (1 - crash1) * crash0) %>%
   dplyr::select(caseID, OEOFF, dec, everything(), -acc) %>% 
   left_join(maximpact, by = "caseID")
 
 
 
-# AEB vs. manual baseline driving. ----
+# Baseline impact speed distribution. ----
+cat("\n------------------ Baseline impact speed distribution ------------------\n\n")
 
-# Functions.
-theta <- function(Y, w = rep(1, nrow(Y))) {
-  colSums(w * Y) / sum(w)
-}
-
-grads <- function(theta0, Y, w = rep(1, nrow(Y))) {
-  return(t(-w * t(t(Y) - theta0)))
-}
-
-hess <- function(theta0, w = rep(1, nrow(Y))) {
-  return(diag(sum(w), length(theta0)))
-}
+# Clean up.
+rm(list = setdiff(ls(), c("VSdata", lsf.str())))
 
 # Data.
 data <- VSdata %>% 
-  filter(crash0 == 1) 
-# %>%
-#   filter(15 <= caseID & caseID <= 17)
-N <- nrow(data)
-n <- max(round(N / 100), 10)
-w <- with(data, crash0 * prob)
-# w <- rep(1, N)
-
-
-# Original.
-Y <- data %>% 
-  dplyr::select(impact_speed_reduction, injury_risk_reduction, crash_avoidance) %>%
-  as.matrix()
-(theta0 <- theta(Y, w))
-G <- grads(theta0, Y, w)
-H <- hess(theta0, w)
-
-# Scaled.
-sds <- sqrt(diag(cov.wt(Y, w, method = "ML")$cov))
-A <- diag(1 / sds)
-Y_scal <- Y %*% t(A)
-theta0_scal <- theta(Y_scal, w)
-G_scal <- grads(theta0_scal, Y_scal, w)
-H_scal <- hess(theta0_scal, w)
-cov.wt(Y_scal, w, method = "ML")$cov
-
-# Centered.
-Y_cent <- t(t(Y) - theta0)
-theta0_cent <- theta(Y_cent, w)
-G_cent <- grads(theta0_cent, Y_cent, w)
-H_cent <- hess(theta0_cent, w)
-
-# Scaled and centered.
-sds <- sqrt(diag(cov.wt(Y, w, method = "ML")$cov))
-A <- diag(1 / sds)
-Y_scal_cent <- t(t(Y) - theta0) %*% t(A)
-theta0_scal_cent <- theta(Y_scal_cent, w)
-G_scal_cent <- grads(theta0_scal_cent, Y_scal_cent, w)
-H_scal_cent <- hess(theta0_scal_cent, w)
-
-# Orthogonalised.
-B <- solve(sqrtm(cov.wt(Y, w, method = "ML")$cov))
-Y_orth <- Y %*% t(B)
-theta0_orth <- theta(Y_orth, w)
-G_orth <- grads(theta0_orth, Y_orth, w)
-H_orth <- hess(theta0_orth, w)
-
-# Arbitrary affine transformation.
-a <- rnorm(3)
-C <- matrix(runif(9), 3)
-C <- C / rowSums(C)
-Y_trans <- t(a + t(Y_scal_cent %*% C))
-theta0_trans <- theta(Y_trans, w)
-G_trans <- grads(theta0_trans, Y_trans, w)
-H_trans <- hess(theta0_trans, w)
-
-
-# D-optimality on original and transformed data.
-res1 <- opt_sampling_scheme(n, G,           H,           w, crit = "D")
-res2 <- opt_sampling_scheme(n, G_cent,      H_cent,      w, crit = "D")
-res3 <- opt_sampling_scheme(n, G_scal,      H_scal,      w, crit = "D")
-res4 <- opt_sampling_scheme(n, G_scal_cent, H_scal_cent, w, crit = "D")
-res5 <- opt_sampling_scheme(n, G_orth,      H_orth,      w, crit = "D")
-res6 <- opt_sampling_scheme(n, G_trans,     H_trans,     w, crit = "D")
-par(mfrow = c(2, 3))
-plot(res1$mu, res2$mu, bty = "l")
-plot(res1$mu, res3$mu, bty = "l")
-plot(res1$mu, res4$mu, bty = "l")
-plot(res1$mu, res5$mu, bty = "l")
-plot(res1$mu, res6$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-res7 <- opt_sampling_scheme(n, G_cent, H_cent,  w, crit = "L", L = sqrtm(solve(acov(res1$mu, G, H, w))), init = res1$mu)
-
-
-# Now try PO-WOR.
-res11 <- opt_sampling_scheme(n, G,           H,           w, crit = "D", design = "PO-WOR")
-res12 <- opt_sampling_scheme(n, G_cent,      H_cent,      w, crit = "D", design = "PO-WOR")
-res13 <- opt_sampling_scheme(n, G_scal,      H_scal,      w, crit = "D", design = "PO-WOR")
-res14 <- opt_sampling_scheme(n, G_scal_cent, H_scal_cent, w, crit = "D", design = "PO-WOR")
-res15 <- opt_sampling_scheme(n, G_orth,      H_orth,      w, crit = "D", design = "PO-WOR")
-res16 <- opt_sampling_scheme(n, G_trans,     H_trans,     w, crit = "D", design = "PO-WOR")
-par(mfrow = c(2, 3))
-plot(res11$mu, res12$mu, bty = "l")
-plot(res11$mu, res13$mu, bty = "l")
-plot(res11$mu, res14$mu, bty = "l")
-plot(res11$mu, res15$mu, bty = "l")
-plot(res11$mu, res16$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-plot(res1$mu, res11$mu, bty = "l")
-res11 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WOR", init = res1$mu)
-
-
-# E-optimality on original and transformed data.
-# Invariant to coordinate-wise location shifts. Not invariant otherwise.
-# Converges for non-standardised data because there is one clear dominant direction. 
-# Does not converge otherwise.
-res1 <- opt_sampling_scheme(n, G,           H,           w, crit = "E")
-res2 <- opt_sampling_scheme(n, G_cent,      H_cent,      w, crit = "E")
-res3 <- opt_sampling_scheme(n, G_scal,      H_scal,      w, crit = "E")
-res4 <- opt_sampling_scheme(n, G_scal_cent, H_scal_cent, w, crit = "E")
-res5 <- opt_sampling_scheme(n, G_orth,      H_orth,      w, crit = "E")
-res6 <- opt_sampling_scheme(n, G_trans,     H_trans,     w, crit = "E")
-
-
-# Approximate E-optimality using Phi_p optimality.
-res1 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 1)
-res2 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 2)
-res3 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 3)
-res4 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 4)
-res5 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 5, init = res4$mu)
-res6 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 6, init = res5$mu)
-res7 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 7, init = res6$mu)
-res8 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "Phi_p", p = 8, init = res7$mu)
-Phi(acov(res1$mu, G_scal, H_scal), "E") / Phi(acov(res7$mu, G_scal, H_scal), "E") # 8% improvement.
-
-res <- approx_E_opt(n, G_scal, H_scal, w)
-Phi(acov(res$mu, G_scal, H_scal), "E") / Phi(acov(res1$mu, G_scal, H_scal), "E") # 8% improvement compared to A-optimality.
-
-
-
-# A-optimality on original and transformed data.
-# Invariant to coordinate-wise location shifts. 
-# Not invariant to arbitrary affine transformations.
-res1 <- opt_sampling_scheme(n, G,       H,       w, crit = "A")
-res2 <- opt_sampling_scheme(n, G_scal,  H_scal,  w, crit = "A")
-res3 <- opt_sampling_scheme(n, G_cent,  H_cent,  w, crit = "A")
-res4 <- opt_sampling_scheme(n, G_orth,  H_orth,  w, crit = "A")
-res5 <- opt_sampling_scheme(n, G_trans, H_trans, w, crit = "A")
-res6 <- opt_sampling_scheme(n, G,       H,       w, crit = "Phi_p", r = 1)
-par(mfrow = c(2, 2))
-plot(res1$mu, res2$mu, bty = "l")
-plot(res1$mu, res3$mu, bty = "l")
-plot(res1$mu, res4$mu, bty = "l")
-plot(res1$mu, res5$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-plot(res1$mu, res6$mu, bty = "l")
-
-
-# L-optimality wrt. matrix square root/Cholesky decomposition of information matrix. 
-# In this case equivalent to A-optimality.
-L <- t(chol(H))
-res <- opt_sampling_scheme(n, G, H, w, crit = "L", L = L, kappa_tol = 1e7)
-
-
-# L-optimality wrt. matrix square root/Cholesky decomposition of empirical covariance matrix of data. 
-# Invariant to coordinate-wise affine transformations.
-L <- t(chol(cov.wt(Y, w, method = "ML")$cov))
-res1 <- opt_sampling_scheme(n, G,      H,      w, crit = "L", L = L, kappa_tol = 1e7)
-res2 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = L, kappa_tol = 1e7)
-res3 <- opt_sampling_scheme(n, G_cent, H_cent, w, crit = "L", L = L, kappa_tol = 1e7)
-res4 <- opt_sampling_scheme(n, G_orth, H_orth, w, crit = "L", L = L, kappa_tol = 1e7)
-res5 <- opt_sampling_scheme(n, G_trans, H_trans, w, crit = "L", L = L, kappa_tol = 1e7)
-res6 <- opt_sampling_scheme(n, G_trans2, H_trans2, w, crit = "L", L = L, kappa_tol = 1e7)
-par(mfrow = c(2, 3))
-plot(res1$mu, res2$mu, bty = "l")
-plot(res1$mu, res3$mu, bty = "l")
-plot(res1$mu, res4$mu, bty = "l")
-plot(res1$mu, res5$mu, bty = "l")
-plot(res1$mu, res6$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-
-# L-optimality wrt. matrix square root/Cholesky decomposition of full-data empirical covariance matrix. 
-# Invariant to arbitrary affine transformations! 
-# In this case equivalent to L-optimality wrt. matrix square root/Cholesky decomposition of empirical covariance matrix of data. 
-GtG <- matrix(0, nrow(G), nrow(G))
-for ( i in 1:ncol(G) ) {
-  GtG <- GtG + tcrossprod(G[, i])
-}
-L <- solve(H, t(chol(GtG)))
-res1 <- opt_sampling_scheme(n, G,      H,      w, crit = "L", L = L, kappa_tol = 1e7)
-res2 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = L, kappa_tol = 1e7)
-res3 <- opt_sampling_scheme(n, G_cent, H_cent, w, crit = "L", L = L, kappa_tol = 1e7)
-res4 <- opt_sampling_scheme(n, G_orth, H_orth, w, crit = "L", L = L, kappa_tol = 1e7)
-res5 <- opt_sampling_scheme(n, G_trans, H_trans, w, crit = "L", L = L, kappa_tol = 1e7)
-res6 <- opt_sampling_scheme(n, G_trans2, H_trans2, w, crit = "L", L = L, kappa_tol = 1e7)
-par(mfrow = c(2, 3))
-plot(res1$mu, res2$mu, bty = "l")
-plot(res1$mu, res3$mu, bty = "l")
-plot(res1$mu, res4$mu, bty = "l")
-plot(res1$mu, res5$mu, bty = "l")
-plot(res1$mu, res6$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-
-# c-optimality.
-res1 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(1, 0, 0), design = "PO-WOR", kappa_tol = 1e6)
-res2 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(1, 0, 0), design = "PO-WR" , kappa_tol = 1e6)
-res3 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(0, 1, 0), design = "PO-WOR", kappa_tol = 1e6)
-res4 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(0, 1, 0), design = "PO-WR" , kappa_tol = 1e6)
-res5 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(0, 0, 1), design = "PO-WOR", kappa_tol = 1e6)
-res6 <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = c(0, 0, 1), design = "PO-WR" , kappa_tol = 1e6)
-
-# c-optimality on standardised and orthogonalised data.
-# Invariant under coordinate-wise affine transformations.
-# Invariant under arbitrary affine transformations if the linear combination of interest is transformed along with the data.
-L <- c(0, 1, 0)
-res7  <- opt_sampling_scheme(n, G_scal, H_scal, w, crit = "L", L = L, design = "PO-WR")
-res8  <- opt_sampling_scheme(n, G_cent, H_cent, w, crit = "L", L = L, design = "PO-WR", kappa_tol = 1e7)
-res9  <- opt_sampling_scheme(n, G_orth, H_orth, w, crit = "L", L = L, design = "PO-WR")
-res10 <- opt_sampling_scheme(n, G_orth, H_orth, w, crit = "L", L = as.numeric(A %*% L), design = "PO-WR")
-par(mfrow = c(2, 2))
-plot(res4$mu, res7$mu, bty = "l")
-plot(res4$mu, res8$mu, bty = "l")
-plot(res4$mu, res9$mu, bty = "l")
-plot(res4$mu, res10$mu, bty = "l")
-par(mfrow = c(1, 1))
-
-
-
-# Baseline impact speed distribution. ----
-
-data <- VSdata %>% 
   filter(crash0 == 1)
-w <- with(data, crash0 * prob)
-N <- nrow(data)
-n <- max(round(N / 100), 10)
-y <- data$impact_speed0
-logy <- log(data$impact_speed0)
-theta0 <- c(weighted.mean(logy, w), sqrt(cov.wt(matrix(logy, ncol = 1), w, method = "ML")$cov))
 
+# As vector. 
+y <- data$impact_speed0 
+logy <- log(data$impact_speed0) 
+
+N <- nrow(data) # Full-data size.
+n <- max(round(N / 100), 10) # Subsample size.
+w <- with(data, crash0 * prob) # Observation weights.
+
+# Full-data parameter.
+theta0 <- c(weighted.mean(logy, w), sqrt(cov.wt(matrix(logy, ncol = 1), w, method = "ML")$cov)) 
+
+# Gradients. 
 grads <- function(theta0, y, w = rep(1, nrow(y))) {
   Z <- (log(y) - theta0[1]) / theta0[2]
   dldMu <- - w * Z / theta0[2]
   dldSig <- - w * (Z^2 - 1) / theta0[2]
   return(rbind(dldMu, dldSig))
 }
+G <- grads(theta0, y, w)
 
+# Hessian.
 hess <- function(theta0, y, w) {
   d1 <- sum(w)
   return(diag(sum(w) * c(1, 2)) / theta0[2]^2)
 }
-
-G <- grads(theta0, y, w)
 H <- hess(theta0, y, w)
 
-# D- and E-optimality.
-res1 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WOR")
-res2 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WR" )
-res3 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WOR")
-res4 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WR" )
-
-# D- and E-optimality, start from random scheme.
-res1 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WOR", init = runif(N))
-res2 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WR",  init = runif(N))
-res3 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WOR", init = runif(N))
-res4 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WR" , init = runif(N))
-
-# D- and E-optimality, start from density sampling scheme. 
-res1 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WOR", init = data$prob)
-res2 <- opt_sampling_scheme(n, G, H, w, crit = "D", design = "PO-WR" , init = data$prob)
-res3 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WOR", init = data$prob)
-res4 <- opt_sampling_scheme(n, G, H, w, crit = "E", design = "PO-WR" , init = data$prob)
-plot(res2$mu, res1$mu, bty = "l")
-
-
-# A-optimality
-res1 <- opt_sampling_scheme(n, G, H, w, design = "PO-WOR", crit = "A")
-res2 <- opt_sampling_scheme(n, G, H, w, design = "PO-WR",  crit = "A")
-plot(res2$mu, res1$mu)
-
-
-# L-optimality wrt. matrix square root/Cholesky decomposition of information matrix. 
-L <- t(chol(H))
-res1 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = L, design = "PO-WOR")
-res2 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = L, design = "PO-WR")
-
-
-# L-optimality wrt. matrix square root/Cholesky decomposition of empirical precision matrix. 
-GtG <- matrix(0, nrow(G), nrow(G))
-for ( i in 1:ncol(G) ) {
-  GtG <- GtG + tcrossprod(G[, i])
+# V-matrix.
+V <- matrix(0, nrow(H), ncol(H))
+for ( i in 1:nrow(G) ) {
+  V <- V + tcrossprod(G[, i])
 }
-L <- solve(H, t(chol(GtG)))
-res3 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = L, design = "PO-WOR")
-res4 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = L, design = "PO-WR")
 
-plot(res1$mu, res3$mu)
+# Sampling schemes.
+params <- tibble(crit = c("A", rep("c", 2), "D", rep("L", 2), "E", rep("Phi_r", 3)), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0)\\T$", "c, $\\mathbf{c} = (0,1)\\T$", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 r = c(rep(NA, 7), 0.5, 5, 10))
+L <- list(NULL, c(1, 0), c(0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
+params$L <- L
+params$s <- 1:nrow(params)
+params <- crossing(design = c("PO-WR", "PO-WOR"), params, niter = NA, status = NA, A_eff = NA, c1_eff = NA, c2_eff = NA, D_eff = NA, dER_eff = NA, dS_eff = NA, E_eff = NA, Phi05_eff = NA, Phi5_eff = NA, Phi10_eff = NA) %>% 
+  arrange(desc(design), s) 
 
+# Find optimal sampling schemes and evaluate performance analytically. 
+for ( i in 1:nrow(params) ) {
+  opt <- optimise_ss(n, G, H, w, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i])
+  params$niter[i] <- opt$niter
+  params$status[i] <- opt$status
+  params$A_eff[i] <- Phi(opt$Gamma, crit = "A")
+  params$c1_eff[i] <- Phi(opt$Gamma, crit = "c", L = L[[2]])
+  params$c2_eff[i] <- Phi(opt$Gamma, crit = "c", L = L[[3]])
+  params$D_eff[i] <- Phi(opt$Gamma, crit = "D")
+  params$dER_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[5]])
+  params$dS_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[6]])
+  params$E_eff[i] <- Phi(opt$Gamma, crit = "E")
+  params$Phi05_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 0.5)
+  params$Phi5_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 5)
+  params$Phi10_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 10)
+}
 
-# c-optimality
-res1 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = c(1, 0), design = "PO-WOR")
-res2 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = c(1, 0), design = "PO-WR")
-res3 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = c(0, 1), design = "PO-WOR")
-res4 <- opt_sampling_scheme(n, G, H, w, crit = "L", L = c(0, 1), design = "PO-WR")
+# Relative efficiencies.
+res <- params %>% 
+  group_by(design) %>% 
+  mutate(A_eff = min(A_eff) / A_eff, 
+         c1_eff = min(c1_eff) / c1_eff, 
+         c2_eff = min(c2_eff) / c2_eff, 
+         D_eff = min(D_eff) / D_eff,
+         E_eff = min(E_eff) / E_eff,
+         dER_eff = min(dER_eff) / dER_eff,
+         dS_eff = min(dS_eff) / dS_eff, 
+         Phi05_eff = min(Phi05_eff) / Phi05_eff,
+         Phi5_eff = min(Phi5_eff) / Phi5_eff,
+         Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
+  mutate(niter_s = ifelse(status == 0, sprintf("%.0f", niter), "Did not converge")) %>% 
+  ungroup() %>%
+  dplyr::select(design, crit, name, niter, niter_s, everything())
+
+# If optimal sampling scheme could not be found.
+for ( i in 1:nrow(res) ) {
+  if ( res$niter_s[i] == "Did not converge") {
+    res[i, 10:ncol(res)] <- NA
+    if ( res$crit[i] == "E" ) {
+      res$E_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+      res$Phi5_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+      res$Phi10_eff[which(res$design == res$design[i])] <- NA
+    }
+  }
+}
+
+# Format cells.
+res <- res %>% mutate(across(contains("eff"), fmt))
+
+# Write xtable to file.
+res %>% 
+  filter(design == "PO-WR") %>% 
+  dplyr::select(name, niter_s, A_eff, c1_eff, c2_eff, D_eff, dER_eff, Phi5_eff) %>% 
+  dplyr::rename("Optimality criterion" = name,
+                "No. iterations needed for convergence" = niter_s,
+                "A-eff" = A_eff,
+                "c$_{(1,0)}$-eff" = c1_eff,
+                "c$_{(0,1)}$-eff" = c2_eff,
+                "D-eff" = D_eff,
+                "d$^*_{\\mathrm{ER}}$-eff"  = dER_eff,
+                "$\\Phi_5$-eff" = Phi5_eff) %>% 
+  xtable(caption = "Evaluation of sampling schemes and optimality criteria for estimating the baseline impact speed distribution, assuming a log-normal model. \\textit{eff = relative efficiency.}", 
+         label = "tab:baseline_impact_speed", 
+         align = c("lp{2.75cm}R{3.125cm}R{1.1cm}R{1.3cm}R{1.3cm}R{1.1cm}R{1.2cm}R{1.2cm}")) %>% 
+  print(caption.placement = "top", 
+        hline.after = c(0, nrow(.)),
+        include.rownames = FALSE,
+        sanitize.text.function = function(x) x,
+        table.placement = "htb!", 
+        file = "Tables/tab2.tex")
 
 
 
 # Baseline impact speed response surface. ----
+cat("\n------------------ Baseline impact response surface ------------------n\n")
 
+# Clean up.
+rm(list = setdiff(ls(), c("VSdata", lsf.str())))
+
+# Data.
 data <- VSdata 
-# %>% 
-#   filter(!(caseID %in% c(23, 25, 41)))
-
-for ( i in 1:length(unique(VSdata$caseID)) ) {
-  id <- unique(VSdata$caseID)[i]
-
-  dat <- VSdata %>%  
-    filter(caseID == id)
-  
-  y <- with(dat, impact_speed0 / max_impact_speed)
-  ymax <- dat$max_impact_speed
-  w <- with(dat, prob)
-  fit <- glm(y~dec*OEOFF, data = dat, family = "quasibinomial")
-  pred <- ymax * fit$fitted
-  
-  plt <- dat %>% mutate(impact_speed0  = as.numeric(pred), grp = 0) %>%
-    bind_rows(dat %>% mutate(grp = 1))
-  
-  p <- ggplot(plt) +
-    geom_line(aes(x = OEOFF, y = impact_speed0, group = dec, colour = dec)) +
-    facet_wrap(~grp) + 
-    labs(title = id) + 
-    theme_classic() +
-    theme(legend.position = NULL)
-  
-  print(p)
-  
-}
-
 data$caseID <- factor(data$caseID)
-data$y <- with(data, impact_speed0 / max_impact_speed)
 
+N <- nrow(data) # Full-data size.
+n <- max(round(N / 100), 10) # Subsample size.
+
+# Model matrix and response vector.
+X <- model.matrix(~caseID*dec*OEOFF, data = data)
+y <- with(data, impact_speed0 / max_impact_speed)
+
+# Fit quasi-binomial logistic response model.
 fit <- glm(y~caseID*dec*OEOFF, data = data, family = "quasibinomial")
-pred <- predict(fit, type = "response")
 
-plt <- data %>% 
-  mutate(impact_speed  = max_impact_speed * as.numeric(pred), grp = 1) %>%
-  bind_rows(data %>% mutate(impact_speed = impact_speed0, grp = 0))
+theta0 <- coef(fit) # Full-data parameter.
+p <- as.numeric(predict(fit, type = "response")) # Predictions.
+G <- t((y - p) * X) # Gradients
+H <- solve(vcov(fit)) # Hessian
 
-
-for ( i in 1:1 ){
-
-  p <- ggplot(plt %>% filter(caseID %in% (4 * (i - 1) + 1):(4 * i)) ) +
-    geom_line(aes(x = OEOFF, y = impact_speed, group = dec, colour = dec))  +
-    facet_grid(caseID~grp, labeller = labeller(grp = c("0" = "Observed", "1" = "Predicted"))) +
-    theme(legend.position = NULL)
-  
-  print(p)
+# V-matrix.
+V <- matrix(0, nrow(H), ncol(H))
+for ( i in 1:nrow(X) ) {
+  V <- V + tcrossprod(G[, i])
 }
+
+# Sampling schemes.
+params <- tibble(crit = c("A", "D", rep("L", 2), "E", rep("Phi_r", 3)), 
+                 name = c("A", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 r = c(rep(NA, 5), 0.5, 5, 10))
+L <- list(NULL, NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
+params$L <- L
+params$s <- 1:nrow(params)
+params <- crossing(design = c("PO-WR", "PO-WOR"), params, niter = NA, status = NA, A_eff = NA, D_eff = NA, dER_eff = NA, dS_eff = NA, E_eff = NA, Phi05_eff = NA, Phi5_eff = NA, Phi10_eff = NA) %>% 
+  arrange(desc(design), s) 
+
+# Find optimal sampling schemes and evaluate performance analytically. 
+for ( i in 1:nrow(params) ) {
+  opt <- optmise_ss(n, G, H, w, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i])
+  params$niter[i] <- opt$niter
+  params$status[i] <- opt$status
+  params$A_eff[i] <- Phi(opt$Gamma, crit = "A")
+  params$D_eff[i] <- Phi(opt$Gamma, crit = "D")
+  params$dER_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[3]])
+  params$dS_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[4]])
+  params$E_eff[i] <- Phi(opt$Gamma, crit = "E")
+  params$Phi05_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 0.5)
+  params$Phi5_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 5)
+  params$Phi10_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 10)
+}
+
+# Relative efficiencies.
+res <- params %>% 
+  group_by(design) %>% 
+  mutate(A_eff = min(A_eff) / A_eff, 
+         D_eff = min(D_eff) / D_eff,
+         E_eff = min(E_eff) / E_eff,
+         dER_eff = min(dER_eff) / dER_eff,
+         dS_eff = min(dS_eff) / dS_eff, 
+         Phi05_eff = min(Phi05_eff) / Phi05_eff,
+         Phi5_eff = min(Phi5_eff) / Phi5_eff,
+         Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
+  mutate(niter_s = ifelse(status == 0, sprintf("%.0f", niter), "Did not converge")) %>% 
+  ungroup() %>%
+  dplyr::select(design, crit, name, niter, niter_s, everything())
+
+# If optimal sampling scheme could not be found.
+for ( i in 1:nrow(res) ) {
+  if ( res$niter_s[i] == "Did not converge") {
+    res[i, 10:ncol(res)] <- NA
+    if ( res$crit[i] == "E" ) {
+      res$E_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+      res$Phi5_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+      res$Phi10_eff[which(res$design == res$design[i])] <- NA
+    }
+  }
+}
+
+# Format cells.
+res <- res %>% mutate(across(contains("eff"), fmt))
+
+# Write xtable to file.
+res %>% 
+  filter(design == "PO-WR") %>% 
+  dplyr::select(name, niter_s, A_eff, D_eff, dER_eff, dS_eff, Phi05_eff) %>% 
+  dplyr::rename("Optimality criterion" = name,
+                "No. iterations needed for convergence" = niter_s,
+                "A-eff" = A_eff,
+                "D-eff" = D_eff,
+                "d$^*_{\\mathrm{ER}}$-eff"  = dER_eff,
+                "d$^*_{\\mathrm{S}}$-eff"  = dS_eff,
+                "$\\Phi_{0.5}$-eff" = Phi05_eff) %>% 
+  xtable(caption = "Evaluation of sampling schemes and optimality criteria for estimating the baseline impact speed response surface, as a function of the off-road glance duration and maximal deceleration during braking. \textit{eff = relative efficiency.}", 
+         label = "tab:impact_speed_response_surface", 
+         align = c("lp{2.75cm}R{3.125cm}R{1.5cm}R{1.5cm}R{1.5cm}R{1.5cm}R{1.5cm}")) %>% 
+  print(caption.placement = "top", 
+        hline.after = c(0, nrow(.)),
+        include.rownames = FALSE,
+        sanitize.text.function = function(x) x,
+        table.placement = "htb!", 
+        file = "Tables/tab3.tex")
+
+
+
+# AEB vs. manual baseline driving. ----
+cat("\n------------------ AEB vs. manual baseline driving ------------------n\n")
+
+# Clean up.
+rm(list = setdiff(ls(), c("VSdata", lsf.str())))
+
+# Data.
+data <- VSdata %>% 
+  filter(crash0 == 1) 
+
+# As matrix.
+Y <- data %>% 
+  dplyr::select(impact_speed_reduction, injury_risk_reduction, crash_avoidance) %>%
+  as.matrix()
+
+N <- nrow(data) # Full-data size.
+n <- max(round(N / 100), 10) # Subsample size.
+w <- with(data, crash0 * prob) # Observation weights.
+
+theta0 <- colSums(w * Y) / sum(w) # Full-data parameter.
+G <- t(-w * t(t(Y) - theta0)) # Gradients.
+H <- diag(sum(w), length(theta0)) # Hessian.
+
+# V-matrix.
+V <- matrix(0, nrow(H), ncol(H))
+for ( i in 1:ncol(G) ) {
+  V <- V + tcrossprod(G[, i])
+}
+
+# Sampling schemes.
+params <- tibble(crit = c("A", rep("c", 3), "D", rep("L", 2), "E", rep("Phi_r", 3)), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0,0)\\T$", "c, $\\mathbf{c} = (0,1,0)\\T$", "c, $\\mathbf{c} = (0,0,1)\\T$", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 r = c(rep(NA, 8), 0.5, 5, 10))
+L <- list(NULL, c(1, 0, 0), c(0, 1, 0), c(0, 0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
+params$L <- L
+params$s <- 1:nrow(params)
+params <- crossing(design = c("PO-WR", "PO-WOR"), params, niter = NA, status = NA, A_eff = NA, c1_eff = NA, c2_eff = NA, c3_eff = NA, D_eff = NA, dER_eff = NA, dS_eff = NA, E_eff = NA, Phi05_eff = NA, Phi5_eff = NA, Phi10_eff = NA) %>% 
+  arrange(desc(design), s) 
+
+# Find optimal sampling schemes and evaluate performance analytically. 
+for ( i in 1:nrow(params) ) {
+  opt <- optmise_ss(n, G, H, w, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i])
+  params$niter[i] <- opt$niter
+  params$status[i] <- opt$status
+  params$A_eff[i] <- Phi(opt$Gamma, crit = "A")
+  params$c1_eff[i] <- Phi(opt$Gamma, crit = "c", L = L[[2]])
+  params$c2_eff[i] <- Phi(opt$Gamma, crit = "c", L = L[[3]])
+  params$c3_eff[i] <- Phi(opt$Gamma, crit = "c", L = L[[4]])
+  params$D_eff[i] <- Phi(opt$Gamma, crit = "D")
+  params$dER_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[6]])
+  params$dS_eff[i] <- Phi(opt$Gamma, crit = "L", L = L[[7]])
+  params$E_eff[i] <- Phi(opt$Gamma, crit = "E")
+  params$Phi05_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 0.5)
+  params$Phi5_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 5)
+  params$Phi10_eff[i] <- Phi(opt$Gamma, crit = "Phi_r", r = 10)
+}
+
+# Relative efficiencies.
+res <- params %>% 
+  group_by(design) %>% 
+  mutate(A_eff = min(A_eff) / A_eff, 
+         c1_eff = min(c1_eff) / c1_eff, 
+         c2_eff = min(c2_eff) / c2_eff, 
+         c3_eff = min(c3_eff) / c3_eff, 
+         D_eff = min(D_eff) / D_eff,
+         E_eff = min(E_eff) / E_eff,
+         dER_eff = min(dER_eff) / dER_eff,
+         dS_eff = min(dS_eff) / dS_eff, 
+         Phi05_eff = min(Phi05_eff) / Phi05_eff,
+         Phi5_eff = min(Phi5_eff) / Phi5_eff,
+         Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
+  mutate(niter_s = ifelse(status == 0, sprintf("%.0f", niter), "Did not converge")) %>% 
+  ungroup() %>%
+  dplyr::select(design, crit, name, niter, niter_s, everything())
+
+# If optimal sampling scheme could not be found.
+for ( i in 1:nrow(res) ) {
+  if ( res$niter_s[i] == "Did not converge") {
+    res[i, 10:ncol(res)] <- NA
+    if ( res$crit[i] == "E" ) {
+      res$E_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+      res$Phi5_eff[which(res$design == res$design[i])] <- NA
+    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+      res$Phi10_eff[which(res$design == res$design[i])] <- NA
+    }
+  }
+}
+
+# Format cells.
+res <- res %>% mutate(across(contains("eff"), fmt))
+
+# Write xtable to file.
+res %>% 
+  filter(design == "PO-WR") %>% 
+  dplyr::select(name, niter_s, A_eff, c1_eff, c2_eff, c3_eff, D_eff, E_eff) %>% 
+  dplyr::rename("Optimality criterion" = name,
+                "No. iterations needed for convergence" = niter_s,
+                "A-eff" = A_eff,
+                "c$_{(1,0,0)}$-eff" = c1_eff,
+                "c$_{(0,1,0)}$-eff" = c2_eff,
+                "c$_{(0,0,1)}$-eff" = c3_eff,
+                "D-eff" = D_eff,
+                "E-eff" = E_eff) %>% 
+  xtable(caption = "Evaluation of sampling schemes for estimating the safety benefits from an automatic emergency braking system compared to baseline manual driving, in terms of mean impact speed reduction, mean injury risk reduction, and crash avoidance rate. \\textit{eff = relative efficiency.}", 
+         label = "tab:finite_population_inference", 
+         align = c("lp{2.75cm}R{3.125cm}R{0.9cm}R{1.5cm}R{1.5cm}R{1.5cm}R{0.9cm}R{0.9cm}")) %>% 
+  print(caption.placement = "top", 
+        hline.after = c(0, nrow(.)),
+        include.rownames = FALSE,
+        sanitize.text.function = function(x) x,
+        table.placement = "htb!", 
+        file = "Tables/tab4.tex")

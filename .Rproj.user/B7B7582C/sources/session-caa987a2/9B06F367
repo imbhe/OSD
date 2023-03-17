@@ -1,0 +1,27 @@
+{
+    "id": "9B06F367",
+    "path": "~/GitHub/OSD/RScript/figures.R",
+    "project_path": "RScript/figures.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1679057633142.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "124,19",
+        "scrollLine": "103"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1679057844,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1679057844706,
+    "read_only": false,
+    "read_only_alternatives": []
+}

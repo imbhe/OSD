@@ -3,28 +3,28 @@ opt_sampling_scheme <- function(n,
                                 hess,
                                 w = rep(1, length(init)), 
                                 design = c("MULT", "PO-WR", "PO-WOR"), 
-                                crit = c("A", "D", "E", "L", "Phi_p"), 
+                                crit = c("A", "c", "D", "E", "L", "Phi_p"), 
                                 L = NULL, 
                                 p = NULL,
                                 init = rep(1, ncol(grads)), 
-                                maxiter = 20, 
+                                maxiter = 50, 
                                 tol = 1e-1, 
                                 freltol = 1e-3, 
                                 kappa_tol = 1e9,
-                                print_level = 2, 
-                                plot = TRUE, 
+                                print_level = 0, 
+                                plot = FALSE, 
                                 ggplot = FALSE) {
   
   require("expm")
   
   if ( any(init < 0) ) { stop("Initial value < 0 not allowed.") }
   if ( length(init) != ncol(grads) ) { stop("Dimensions do not agree. length(init) != ncol(Y).") }
-  if ( !is.null(p) && p <= 0 ) { stop("p must be > 0.") }
+  if ( !is.na(p) && !is.null(p) && p <= 0 ) { stop("p must be > 0.") }
   
   tic()
   design <- match.arg(design)
   crit <- match.arg(crit)
-
+  
   # Initialisation.
   I <- solve(hess)
   N <- length(init)
@@ -40,7 +40,7 @@ opt_sampling_scheme <- function(n,
   
   # Iterate.
   while ( 1 ) {
-
+    
     # Evaluate objective function etc.
     Gamma <- acov(mu, grads, hess, w, design)
     val <- Phi(Gamma, crit, L, p)
@@ -62,7 +62,8 @@ opt_sampling_scheme <- function(n,
       D <- diag(eig$values^(0.5 * (p - 1)))
       L <- P %*% D %*% t(P)
     }
-    ci <- vapply(1:N, function(ix) sqrt(crossprod(t(L) %*% I %*% grads[, ix])), numeric(1))
+    LtI <- t(L) %*% I
+    ci <- vapply(1:N, function(ix) sqrt(crossprod(LtI %*% grads[, ix])), numeric(1))
     
     # Check convergence.
     if ( design == "PO-WOR" ) {
@@ -97,7 +98,7 @@ opt_sampling_scheme <- function(n,
     } else if ( print_level == 2 ) { 
       cat(sprintf("Iteration %d. objective = %.6f. %s\n", i, val, note))
     }
-
+    
     # Stop if algorithm has converged.
     if ( conv | i == maxiter | maxiter == 0 ) { break }
     
@@ -107,7 +108,7 @@ opt_sampling_scheme <- function(n,
     if ( design == "PO-WOR" ) {
       mu <- inclusionprobabilities(mu, n)
     }
-
+    
   }
   
   t <- toc(quiet = TRUE)
