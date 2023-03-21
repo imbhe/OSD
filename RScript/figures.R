@@ -24,10 +24,6 @@ cat("\14")
 library("cowplot")
 library("tidyverse")
 
-source("Rscript/acov.R")
-source("Rscript/optimise_ss.R")
-source("Rscript/Phi.R")
-
 
 # ggplot theme. ----
 

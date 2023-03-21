@@ -1,22 +1,22 @@
 % latex table generated in R 4.2.2 by xtable 1.8-4 package
-% Fri Mar 17 12:34:21 2023
+% Mon Mar 20 16:07:47 2023
 \begin{table}[htb!]
 \centering
-\caption{Evaluation of sampling schemes and optimality criteria for estimating the baseline impact speed distribution, assuming a log-normal model. \textit{eff = relative efficiency.}} 
+\caption{Number of iterations needed for convergence, average execution time, and relative efficiencies of sampling schemes and optimality criteria for estimating the log-normal model \eqref{eq:lognormal}. \textit{eff = relative efficiency.}} 
 \label{tab:baseline_impact_speed}
-\begin{tabular}{p{2.75cm}R{3.125cm}R{1.1cm}R{1.3cm}R{1.3cm}R{1.1cm}R{1.2cm}R{1.2cm}}
- Optimality criterion & No. iterations needed for convergence & A-eff & c$_{(1,0)}$-eff & c$_{(0,1)}$-eff & D-eff & d$^*_{\mathrm{ER}}$-eff & $\Phi_5$-eff \\ 
+\begin{tabular}{lrrrrrrrr}
+ Optimality criterion. & No. iterations & Time (s) & A-eff & c$_{(1,0)}$-eff & c$_{(0,1)}$-eff & D-eff & d$^*_{\mathrm{ER}}$-eff & $\Phi_5$-eff \\ 
   \hline
-A & 1 & \textbf{1.00} & 0.90 & 0.76 & 0.99 & 0.99 & 0.96 \\ 
-  c, $\mathbf{c} = (1,0)\T$ & 1 & 0.14 & \textbf{1.00} & 0.04 & 0.24 & 0.10 & 0.09 \\ 
-  c, $\mathbf{c} = (0,1)\T$ & 1 & 0.27 & 0.16 & \textbf{1.00} & 0.47 & 0.34 & 0.19 \\ 
-  D & 3 & 0.98 & 0.86 & 0.79 & \textbf{1.00} & 0.98 & 0.91 \\ 
-  d$^*_{\mathrm{ER}}$ & 1 & 0.99 & 0.84 & 0.83 & 0.99 & \textbf{1.00} & 0.92 \\ 
-  d$^*_{\mathrm{S}}$ & 1 & 0.97 & 0.84 & 0.79 & 0.96 & 0.98 & 0.94 \\ 
-  E & Did not converge &  &  &  &  &  &  \\ 
-  $\Phi_{0.5}$ & 2 & $>$0.99 & 0.89 & 0.77 & $>$0.99 & 0.99 & 0.94 \\ 
-  $\Phi_5$ & 25 & 0.95 & 0.91 & 0.65 & 0.91 & 0.91 & \textbf{1.00} \\ 
-  $\Phi_{10}$ & Did not converge &  &  &  &  &  &  \\ 
+A & 0 & 0.39 & \textbf{1.00} & 0.90 & 0.76 & 0.99 & 0.99 & 0.96 \\ 
+  c, $\mathbf{c} = (1,0)\T$ & 0 & 0.38 & 0.14 & \textbf{1.00} & 0.04 & 0.24 & 0.10 & 0.09 \\ 
+  c, $\mathbf{c} = (0,1)\T$ & 0 & 0.41 & 0.27 & 0.16 & \textbf{1.00} & 0.47 & 0.34 & 0.19 \\ 
+  D & 4 & 3.33 & 0.98 & 0.86 & 0.79 & \textbf{1.00} & 0.99 & 0.91 \\ 
+  d$^*_{\mathrm{ER}}$ & 0 & 0.37 & 0.99 & 0.84 & 0.83 & 0.99 & \textbf{1.00} & 0.92 \\ 
+  d$^*_{\mathrm{S}}$ & 0 & 0.40 & 0.97 & 0.84 & 0.79 & 0.96 & 0.98 & 0.94 \\ 
+  E & Diverged & - &  &  &  &  &  &  \\ 
+  $\Phi_{0.5}$ & 3 & 2.95 & $>$0.99 & 0.88 & 0.78 & $>$0.99 & 0.99 & 0.94 \\ 
+  $\Phi_5$ & 25 & 19.84 & 0.95 & 0.91 & 0.65 & 0.90 & 0.91 & \textbf{1.00} \\ 
+  $\Phi_{10}$ & Diverged & - &  &  &  &  &  &  \\ 
    \hline
 \end{tabular}
 \end{table}

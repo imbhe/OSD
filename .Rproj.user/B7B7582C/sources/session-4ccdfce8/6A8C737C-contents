@@ -25,8 +25,8 @@ Phi <- function(CovMat,
   
   crit <- match.arg(crit)
   if ( !is.na(r) && !is.null(r) && r <= 0 ) { stop("r must be > 0.") }
-  if ( crit == "Phi_r" && is.null(r) ) { stop('Real number r > 0 must be specified when crit = "Phi_r".') }
-  if ( crit == "L" && is.null(L) ) { stop('Real matrix L must be specified when crit = "L".') }
+  if ( crit == "Phi_r" && !is.null(r) ) { stop('Real number r > 0 must be specified when crit = "Phi_r".') }
+  if ( crit == "L" && !is.null(L) ) { stop('Real matrix L must be specified when crit = "L".') }
 
   d <- ncol(CovMat)
   

@@ -54,8 +54,8 @@ optimise_ss <- function(n,
   
   library("expm")
   library("sampling")
-  source("acov.R")
-  source("Phi.R")
+  source("Rscript/acov.R")
+  source("Rscript/Phi.R")
   
   if ( any(init < 0) ) { stop("Initial value < 0 not allowed.") }
   if ( length(init) != ncol(grads) ) { stop("Dimensions do not agree. length(init) != ncol(Y).") }
@@ -89,7 +89,7 @@ optimise_ss <- function(n,
     }
 
     # Evaluate objective function etc. 
-    Gamma <- acov(mu, grads, hess, w, design)
+    Gamma <- acov(mu, grads, hess, design)
     val <- Phi(Gamma, crit, L, r)
     vals[i] <- val
 

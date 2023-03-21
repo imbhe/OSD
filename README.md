@@ -14,7 +14,7 @@ Code used for the experiments in the paper Optimal Subsampling Designs by Henrik
 
 * figures.R: Generates Figure S1 and S2 in Appendix B.
 
-Code is included in the RScript folder.
+Code is included in the Rscript folder.
 
 Input data is stored in the Data folder. 
 
