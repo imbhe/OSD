@@ -73,7 +73,7 @@ y <- data$impact_speed0
 logy <- log(data$impact_speed0) 
 
 N <- nrow(data) # Full-data size.
-n <- max(round(N / 100), 10) # Subsample size.
+n <- round(N / 100) # Subsample size.
 w <- with(data, crash0 * prob) # Observation weights.
 
 # Full-data parameter.
@@ -225,7 +225,7 @@ data <- VSdata
 data$caseID <- factor(data$caseID)
 
 N <- nrow(data) # Full-data size.
-n <- max(round(N / 100), 10) # Subsample size.
+n <- round(N / 100) # Subsample size.
 
 # Model matrix and response vector.
 X <- model.matrix(~caseID*dec*OEOFF, data = data)
@@ -369,7 +369,7 @@ Y <- data %>%
   as.matrix()
 
 N <- nrow(data) # Full-data size.
-n <- max(round(N / 100), 10) # Subsample size.
+n <- round(N / 100) # Subsample size.
 w <- with(data, crash0 * prob) # Observation weights.
 
 theta0 <- colSums(w * Y) / sum(w) # Full-data parameter.
@@ -398,7 +398,7 @@ res <- add_column(params, niter = NA_real_, t = NA_real_, status = NA_real_,
                   Phi05_eff = NA_real_, Phi5_eff = NA_real_, Phi10_eff = NA_real_)
 
 # Find optimal sampling schemes and evaluate performance analytically. 
-nreps <- 100
+nreps <- 10000
 for ( i in 1:nrow(params) ) {
   t <- 0
   for ( j in 1:nreps ) { # Repeat to assess computation time.
