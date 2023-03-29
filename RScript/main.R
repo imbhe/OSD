@@ -28,9 +28,9 @@ library("xtable")
 
 source("Rscript/acov.R")
 source("Rscript/fmt.R")
-source("Rscript/Lopt.R")
+source("Rscript/lopt.R")
 source("Rscript/Phi.R")
-source("Rscript/Phiopt.R")
+source("Rscript/phiopt")
 
 
 # Prepare data. ----
@@ -123,11 +123,11 @@ for ( i in 1:nrow(params) ) {
   for ( j in 1:nreps ) { # Repeat to assess computation time.
     print_level <- ifelse( j == 1, 1, 0)
     if ( params$crit[i] %in% c("A", "c", "L") ) {
-      opt <- Lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
+      opt <- lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
       opt$status <- 0
       Gamma <- acov(mu = opt$mu, G, H, params$design[i])
     } else {
-      opt <- Phiopt(n, G, H, crit = params$crit[i], 
+      opt <- phiopt(n, G, H, crit = params$crit[i], 
                     L = params$L[[i]], r = params$r[i], design = params$design[i], 
                     print_level = print_level)
       Gamma <- opt$Gamma
@@ -163,7 +163,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "0", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
@@ -270,11 +270,11 @@ for ( i in 1:nrow(params) ) {
   for ( j in 1:nreps ) { # Repeat to assess computation time.
     print_level <- ifelse( j == 1, 1, 0)
     if ( params$crit[i] %in% c("A", "c", "L") ) {
-      opt <- Lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
+      opt <- lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
       opt$status <- 0
       Gamma <- acov(mu = opt$mu, G, H, params$design[i])
     } else {
-      opt <- Phiopt(n, G, H, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i], print_level = print_level)
+      opt <- phiopt(n, G, H, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i], print_level = print_level)
       Gamma <- opt$Gamma
     }
     t <- t + opt$elapsed / nreps
@@ -304,7 +304,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "0", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
@@ -404,11 +404,11 @@ for ( i in 1:nrow(params) ) {
   for ( j in 1:nreps ) { # Repeat to assess computation time.
     print_level <- ifelse( j == 1, 1, 0)
     if ( params$crit[i] %in% c("A", "c", "L") ) {
-      opt <- Lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
+      opt <- lopt(n, G, H, L = params$L[[i]], design = params$design[i], print_level = print_level)
       opt$status <- 0
       Gamma <- acov(mu = opt$mu, G, H, params$design[i])
     } else {
-      opt <- Phiopt(n, G, H, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i], print_level = print_level)
+      opt <- phiopt(n, G, H, crit = params$crit[i], L = params$L[[i]], r = params$r[i], design = params$design[i], print_level = print_level)
       Gamma <- opt$Gamma
     }
     t <- t + opt$elapsed / nreps
@@ -444,7 +444,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "0", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
