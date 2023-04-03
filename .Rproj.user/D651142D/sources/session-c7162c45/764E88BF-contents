@@ -173,7 +173,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
@@ -309,7 +309,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
@@ -444,7 +444,7 @@ res <- res %>%
          Phi10_eff = min(Phi10_eff) / Phi10_eff) %>% 
   mutate(niter_s = ifelse(status == 1, "Diverged", sprintf("%.0f", niter)),
          niter_s = ifelse(status == 2, "Did not converge", niter_s),
-         niter_s = ifelse(niter_s == "NA", "1", niter_s)) %>% 
+         niter_s = ifelse(niter_s == "NA", "", niter_s)) %>% 
   dplyr::select(crit, name, niter, niter_s, t, everything())
 
 # If optimal sampling scheme could not be found.
