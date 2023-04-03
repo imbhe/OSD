@@ -21,6 +21,7 @@ cat("\14")
 
 # Load packages. ----
 
+library("benchmarkme")
 library("expm")
 library("sampling")
 library("tidyverse")
@@ -31,6 +32,22 @@ source("Rscript/fmt.R")
 source("Rscript/lopt.R")
 source("Rscript/Phi.R")
 source("Rscript/phiopt.R")
+
+
+# Print session info. ----
+
+sink("session_info.txt")
+
+cat("R Session Info\n")
+print(sessionInfo())
+
+cat("\n\nCPU Info\n")
+print(get_cpu())
+
+cat("\n\nRAM\n")
+print(get_ram())
+
+sink()
 
 
 # Prepare data. ----
@@ -102,13 +119,12 @@ for ( i in 1:nrow(G) ) {
 }
 
 # Parameters.
-params <- tibble(crit = c("A", rep("c", 2), "D", rep("L", 2), "E", rep("Phi_r", 3)), 
-                 name = c("A", "c, $\\mathbf{c} = (1,0)\\T$", "c, $\\mathbf{c} = (0,1)\\T$", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
-                 r = c(rep(NA, 7), 0.5, 5, 10),
+params <- tibble(crit = c("A", rep("c", 2), "D", rep("L", 2), "E", rep("Phi_s", 3)), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0)\\T$", "c, $\\mathbf{c} = (0,1)\\T$", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 s = c(rep(NA, 7), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), c(1, 0), c(0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
 params$L <- L
-params$s <- 1:nrow(params)
 
 # To store results. 
 res <- add_column(params, niter = NA_real_, t = NA_real_, status = NA_real_,
@@ -124,7 +140,7 @@ for ( i in 1:nrow(params) ) {
     Gamma <- acov(mu = opt$mu, G, H, params$design[i])
   } else {
     opt <- phiopt(n, G, H, crit = params$crit[i], 
-                  L = params$L[[i]], r = params$r[i], design = params$design[i], 
+                  L = params$L[[i]], s = params$s[i], design = params$design[i], 
                   print_level = 1)
     Gamma <- opt$Gamma
   }
@@ -138,9 +154,9 @@ for ( i in 1:nrow(params) ) {
   res$dER_eff[i] <- Phi(Gamma, crit = "L", L = L[[5]])
   res$dS_eff[i] <- Phi(Gamma, crit = "L", L = L[[6]])
   res$E_eff[i] <- Phi(Gamma, crit = "E")
-  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 0.5)
-  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 5)
-  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 10)
+  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 0.5)
+  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 5)
+  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 10)
 }
 
 # Relative efficiencies.
@@ -166,9 +182,9 @@ for ( i in 1:nrow(res) ) {
     res[i, 11:ncol(res)] <- NA
     if ( res$crit[i] == "E" ) {
       res$E_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+    } else if ( res$crit[i] == "Phi_s" & res$s[i] == 5 ) {
       res$Phi5_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+    } else if ( res$crit[i] == "Phi_s" & res$s[i] == 10 ) {
       res$Phi10_eff[which(res$design == res$design[i])] <- NA
     }
   }
@@ -185,7 +201,7 @@ res %>% mutate(across(contains("eff"), fmt)) %>%
                 "c$_{(1,0)}$-eff" = c1_eff,
                 "c$_{(0,1)}$-eff" = c2_eff,
                 "D-eff" = D_eff,
-                "d$^*_{\\mathrm{ER}}$-eff"  = dER_eff,
+                "$d{\\mathrm{ER}}$-eff"  = dER_eff,
                 "$\\Phi_5$-eff" = Phi5_eff) %>% 
   xtable(caption = "Number of fixed-point iterations needed for convergence, execution time, and relative efficiencies of sampling schemes and optimality criteria for estimating the log-normal model \\eqref{eq:lognormal}. \\textit{eff = relative efficiency.}", 
          label = "tab:baseline_impact_speed", 
@@ -243,13 +259,12 @@ for ( i in 1:nrow(X) ) {
 }
 
 # Parameters.
-params <- tibble(crit = c("A", "D", rep("L", 2), "E", rep("Phi_r", 3)), 
-                 name = c("A", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
-                 r = c(rep(NA, 5), 0.5, 5, 10),
+params <- tibble(crit = c("A", "D", rep("L", 2), "E", rep("Phi_s", 3)), 
+                 name = c("A", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 s = c(rep(NA, 5), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
 params$L <- L
-params$s <- 1:nrow(params)
 
 # To store results.
 res <- add_column(params, niter = NA_real_, t = NA_real_, status = NA_real_, 
@@ -265,7 +280,7 @@ for ( i in 1:nrow(params) ) {
     Gamma <- acov(mu = opt$mu, G, H, params$design[i])
   } else {
     opt <- phiopt(n, G, H, crit = params$crit[i], 
-                  L = params$L[[i]], r = params$r[i], design = params$design[i], 
+                  L = params$L[[i]], s = params$s[i], design = params$design[i], 
                   print_level = 1)
     Gamma <- opt$Gamma
   }
@@ -277,9 +292,9 @@ for ( i in 1:nrow(params) ) {
   res$dER_eff[i] <- Phi(Gamma, crit = "L", L = L[[3]])
   res$dS_eff[i] <- Phi(Gamma, crit = "L", L = L[[4]])
   res$E_eff[i] <- Phi(Gamma, crit = "E")
-  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 0.5)
-  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 5)
-  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 10)
+  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 0.5)
+  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 5)
+  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi_s", s = 10)
 }
 
 # Relative efficiencies.
@@ -303,9 +318,9 @@ for ( i in 1:nrow(res) ) {
     res[i, 11:ncol(res)] <- NA
     if ( res$crit[i] == "E" ) {
       res$E_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+    } else if ( res$crit[i] == "Phi_s" & res$s[i] == 5 ) {
       res$Phi5_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+    } else if ( res$crit[i] == "Phi_s" & res$s[i] == 10 ) {
       res$Phi10_eff[which(res$design == res$design[i])] <- NA
     }
   }
@@ -320,8 +335,8 @@ res %>% mutate(across(contains("eff"), fmt)) %>%
                 "Time (s)" = t,
                 "A-eff" = A_eff,
                 "D-eff" = D_eff,
-                "d$^*_{\\mathrm{ER}}$-eff"  = dER_eff,
-                "d$^*_{\\mathrm{S}}$-eff"  = dS_eff,
+                "$d{\\mathrm{ER}}$-eff"  = dER_eff,
+                "$d{\\mathrm{S}}$-eff"  = dS_eff,
                 "$\\Phi_{0.5}$-eff" = Phi05_eff) %>% 
   xtable(caption = sprintf("Number of fixed-point iterations needed for convergence, execution time, and relative efficiencies of sampling schemes and optimality criteria for estimating the quasi-binomial logistic regression model \\eqref{eq:qblr}. The computation time for fitting the model to the full dataset was %.2f s. \\textit{eff = relative efficiency.}", t_theta0), 
          label = "tab:impact_speed_response_surface", 
@@ -373,13 +388,12 @@ for ( i in 1:ncol(G) ) {
 }
 
 # Parameters.
-params <- tibble(crit = c("A", rep("c", 3), "D", rep("L", 2), "E", rep("Phi_r", 3)), 
-                 name = c("A", "c, $\\mathbf{c} = (1,0,0)\\T$", "c, $\\mathbf{c} = (0,1,0)\\T$", "c, $\\mathbf{c} = (0,0,1)\\T$", "D", "d$^*_{\\mathrm{ER}}$", "d$^*_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
-                 r = c(rep(NA, 8), 0.5, 5, 10),
+params <- tibble(crit = c("A", rep("c", 3), "D", rep("L", 2), "E", rep("Phi_s", 3)), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0,0)\\T$", "c, $\\mathbf{c} = (0,1,0)\\T$", "c, $\\mathbf{c} = (0,0,1)\\T$", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 s = c(rep(NA, 8), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), c(1, 0, 0), c(0, 1, 0), c(0, 0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
 params$L <- L
-params$s <- 1:nrow(params)
 
 # To store results.
 res <- add_column(params, niter = NA_real_, t = NA_real_, status = NA_real_, 
@@ -395,7 +409,7 @@ for ( i in 1:nrow(params) ) {
     Gamma <- acov(mu = opt$mu, G, H, params$design[i])
   } else {
     opt <- phiopt(n, G, H, crit = params$crit[i], 
-                  L = params$L[[i]], r = params$r[i], design = params$design[i], 
+                  L = params$L[[i]], s = params$s[i], design = params$design[i], 
                   print_level = 1)
     Gamma <- opt$Gamma
   }
@@ -410,9 +424,9 @@ for ( i in 1:nrow(params) ) {
   res$dER_eff[i] <- Phi(Gamma, crit = "L", L = L[[6]])
   res$dS_eff[i] <- Phi(Gamma, crit = "L", L = L[[7]])
   res$E_eff[i] <- Phi(Gamma, crit = "E")
-  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 0.5)
-  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 5)
-  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi_r", r = 10)
+  res$Phi05_eff[i] <- Phi(Gamma, crit = "Phi", s = 0.5)
+  res$Phi5_eff[i] <- Phi(Gamma, crit = "Phi", s = 5)
+  res$Phi10_eff[i] <- Phi(Gamma, crit = "Phi", s = 10)
 }
 
 # Relative efficiencies.
@@ -439,9 +453,9 @@ for ( i in 1:nrow(res) ) {
     res[i, 11:ncol(res)] <- NA
     if ( res$crit[i] == "E" ) {
       res$E_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 5 ) {
+    } else if ( res$crit[i] == "Phi" & res$s[i] == 5 ) {
       res$Phi5_eff[which(res$design == res$design[i])] <- NA
-    } else if ( res$crit[i] == "Phi_r" & res$r[i] == 10 ) {
+    } else if ( res$crit[i] == "Phi" & res$s[i] == 10 ) {
       res$Phi10_eff[which(res$design == res$design[i])] <- NA
     }
   }

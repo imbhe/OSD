@@ -12,20 +12,20 @@
 #   - CovMat      (Approximate) covariance matrix.
 #   - crit        optimality criterion.
 #   - L           L-matrix for linear optimality criteria, including c-optimality. 
-#   - r           r parameter for the Phi_r-optimality criterion.
+#   - s           s parameter for the Phi_s-optimality criterion.
 #
 # OUTPUT: value of objective function Phi.
 #
 ################################################################################
 
 Phi <- function(CovMat, 
-                crit = c("A", "c", "D", "E", "L", "Phi_r"), 
+                crit = c("A", "c", "D", "E", "L", "Phi_s"), 
                 L = NULL, 
-                r = NULL) {
+                s = NULL) {
   
   crit <- match.arg(crit)
-  if ( !is.na(r) && !is.null(r) && r <= 0 ) { stop("r must be > 0.") }
-  if ( crit == "Phi_r" && is.null(r) ) { stop('Real number r > 0 must be specified when crit = "Phi_r".') }
+  if ( !is.na(s) && !is.null(s) && s <= 0 ) { stop("s must be > 0.") }
+  if ( crit == "Phi_s" && is.null(s) ) { stop('Real number s > 0 must be specified when crit = "Phi_s".') }
   if ( crit == "L" && is.null(L) ) { stop('Real matrix L must be specified when crit = "L".') }
 
   d <- ncol(CovMat)
@@ -38,11 +38,11 @@ Phi <- function(CovMat,
     val <- max(eigen(CovMat)$values)
   } else if ( crit %in% c("c", "L") ) {
     val <- sum(diag(CovMat %*% tcrossprod(L)))
-  } else if ( crit == "Phi_r" ) {
+  } else if ( crit == "Phi_s" ) {
     eig <- eigen(CovMat)
     P <- eig$vectors
-    D <- diag(eig$values^r)
-    val <- sum(diag(P %*% D %*% t(P)))^{1/r}
+    D <- diag(eig$values^s)
+    val <- sum(diag(P %*% D %*% t(P)))^{1/s}
   }
   
   return(val)

@@ -1,26 +1,26 @@
 {
-    "id": "2E98216D",
+    "id": "764E88BF",
     "path": "~/GitHub/OSD/RScript/main.R",
     "project_path": "RScript/main.R",
     "type": "r_source",
     "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1680083025776.0,
+    "created": 1680510197054.0,
     "source_on_save": false,
     "relative_order": 1,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "189,77",
-        "scrollLine": "168"
+        "cursorPosition": "19,0",
+        "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1680145589,
+    "lastKnownWriteTime": 1680511046,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1680145589206,
+    "last_content_update": 1680511046227,
     "read_only": false,
     "read_only_alternatives": []
 }
