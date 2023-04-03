@@ -120,7 +120,7 @@ for ( i in 1:nrow(G) ) {
 
 # Parameters.
 params <- tibble(crit = c("A", rep("c", 2), "D", rep("L", 2), "E", rep("Phi_s", 3)), 
-                 name = c("A", "c, $\\mathbf{c} = (1,0)\\T$", "c, $\\mathbf{c} = (0,1)\\T$", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0)\\T$", "c, $\\mathbf{c} = (0,1)\\T$", "D", "$d_{\\mathrm{ER}}$", "$d_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
                  s = c(rep(NA, 7), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), c(1, 0), c(0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
@@ -201,7 +201,7 @@ res %>% mutate(across(contains("eff"), fmt)) %>%
                 "c$_{(1,0)}$-eff" = c1_eff,
                 "c$_{(0,1)}$-eff" = c2_eff,
                 "D-eff" = D_eff,
-                "$d{\\mathrm{ER}}$-eff"  = dER_eff,
+                "$d_{\\mathrm{ER}}$-eff"  = dER_eff,
                 "$\\Phi_5$-eff" = Phi5_eff) %>% 
   xtable(caption = "Number of fixed-point iterations needed for convergence, execution time, and relative efficiencies of sampling schemes and optimality criteria for estimating the log-normal model \\eqref{eq:lognormal}. \\textit{eff = relative efficiency.}", 
          label = "tab:baseline_impact_speed", 
@@ -260,7 +260,7 @@ for ( i in 1:nrow(X) ) {
 
 # Parameters.
 params <- tibble(crit = c("A", "D", rep("L", 2), "E", rep("Phi_s", 3)), 
-                 name = c("A", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 name = c("A", "D", "$d_{\\mathrm{ER}}$", "$d_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
                  s = c(rep(NA, 5), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
@@ -335,8 +335,8 @@ res %>% mutate(across(contains("eff"), fmt)) %>%
                 "Time (s)" = t,
                 "A-eff" = A_eff,
                 "D-eff" = D_eff,
-                "$d{\\mathrm{ER}}$-eff"  = dER_eff,
-                "$d{\\mathrm{S}}$-eff"  = dS_eff,
+                "$d_{\\mathrm{ER}}$-eff"  = dER_eff,
+                "$d_{\\mathrm{S}}$-eff"  = dS_eff,
                 "$\\Phi_{0.5}$-eff" = Phi05_eff) %>% 
   xtable(caption = sprintf("Number of fixed-point iterations needed for convergence, execution time, and relative efficiencies of sampling schemes and optimality criteria for estimating the quasi-binomial logistic regression model \\eqref{eq:qblr}. The computation time for fitting the model to the full dataset was %.2f s. \\textit{eff = relative efficiency.}", t_theta0), 
          label = "tab:impact_speed_response_surface", 
@@ -389,7 +389,7 @@ for ( i in 1:ncol(G) ) {
 
 # Parameters.
 params <- tibble(crit = c("A", rep("c", 3), "D", rep("L", 2), "E", rep("Phi_s", 3)), 
-                 name = c("A", "c, $\\mathbf{c} = (1,0,0)\\T$", "c, $\\mathbf{c} = (0,1,0)\\T$", "c, $\\mathbf{c} = (0,0,1)\\T$", "D", "$d{\\mathrm{ER}}$", "$d{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
+                 name = c("A", "c, $\\mathbf{c} = (1,0,0)\\T$", "c, $\\mathbf{c} = (0,1,0)\\T$", "c, $\\mathbf{c} = (0,0,1)\\T$", "D", "$d_{\\mathrm{ER}}$", "$d_{\\mathrm{S}}$", "E", "$\\Phi_{0.5}$", "$\\Phi_5$", "$\\Phi_{10}$"), 
                  s = c(rep(NA, 8), 0.5, 5, 10),
                  design = "PO-WR")
 L <- list(diag(ncol(H)), c(1, 0, 0), c(0, 1, 0), c(0, 0, 1), NULL, sqrtm(H), H %*% solve(sqrtm(V)), NULL, NULL, NULL, NULL)
