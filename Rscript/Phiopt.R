@@ -6,7 +6,7 @@
 #
 # Last edited: 2023-03-20
 #
-# Description:  Find Phi-optimal sampling scheme using the fixed point method (Algorithm 2, Section 3.3).
+# Description:  Find Phi-optimal sampling scheme using the fixed-point method (Algorithm 2, Section 3.3).
 #
 # INPUT: 
 #   - n           subsample size.
@@ -15,7 +15,7 @@
 #   - design      sampling design.
 #   - crit        optimality criterion.
 #   - L           L-matrix for linear optimality criteria, including c-optimality. 
-#   - s           s parameter for the Phi_s-optimality criterion.
+#   - q           q parameter for the Phi_q-optimality criterion.
 #   - init        initial sampling scheme (defaults to uniform).
 #   - maxiter     maximal number of iterations. 
 #   - eps         tolerance parameter for relative improvement of objective function. 
@@ -37,9 +37,9 @@
 phiopt <- function(n,
                    grads, 
                    hess,
-                   crit = c("A", "c", "D", "E", "L", "Phi_s"), 
+                   crit = c("A", "c", "D", "E", "L", "Phi_q"), 
                    L = NULL, 
-                   s = NULL,
+                   q = NULL,
                    design = c("MULTI", "PO-WR", "PO-WOR"), 
                    init = rep(1, ncol(grads)), 
                    maxiter = 1e2, 
@@ -55,12 +55,12 @@ phiopt <- function(n,
   
   if ( any(init < 0) ) { stop("Initial value < 0 not allowed.") }
   if ( length(init) != ncol(grads) ) { stop("Dimensions do not agree. length(init) != ncol(Y).") }
-  if ( !is.na(s) && !is.null(s) && s <= 0 ) { stop("s must be > 0.") }
-  if ( crit == "Phi_s" && is.null(s) ) { stop('Real number s > 0 must be specified when crit = "Phi_s".') }
+  if ( !is.na(q) && !is.null(q) && q <= 0 ) { stop("q must be > 0.") }
+  if ( crit == "Phi_q" && is.null(q) ) { stop('Real number q > 0 must be specified when crit = "Phi_q".') }
   if ( crit == "L" && is.null(L) ) { stop('Real matrix L must be specified when crit = "L".') }
   
   if(print_level > 0) {
-    print_crit <- ifelse(crit == "Phi_s", paste0("Phi_", s), crit)
+    print_crit <- ifelse(crit == "Phi_q", paste0("Phi_", q), crit)
     cat(sprintf("--- %s-optimality criterion ---\n", print_crit))
   }
   
@@ -85,7 +85,7 @@ phiopt <- function(n,
     
     # Evaluate objective function etc. 
     Gamma <- acov(mu, grads, hess, design)
-    val <- Phi(Gamma, crit, L, s)
+    val <- Phi(Gamma, crit, L, q)
     vals[i] <- val
     
     # Evaluate L-matrix.
@@ -95,10 +95,10 @@ phiopt <- function(n,
       L <- sqrtm(solve(Gamma)) # Matrix square root.
     } else if ( crit == "E" ) {
       L <- eigen(Gamma)$vectors[, 1]
-    } else if ( crit == "Phi_s" ) {
+    } else if ( crit == "Phi_q" ) {
       eig <- eigen(Gamma)
       P <- eig$vectors
-      D <- diag(eig$values^(0.5 * (s - 1)))
+      D <- diag(eig$values^(0.5 * (q - 1)))
       L <- P %*% D %*% t(P)
     }
     
