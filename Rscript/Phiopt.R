@@ -4,7 +4,7 @@
 #
 # Author: Henrik Imberg
 #
-# Last edited: 2023-03-20
+# Last edited: 2023-04-05
 #
 # Description:  Find Phi-optimal sampling scheme using the fixed-point method (Algorithm 2, Section 3.3).
 #

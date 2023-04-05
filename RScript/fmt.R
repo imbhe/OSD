@@ -4,7 +4,7 @@
 #
 # Author: Henrik Imberg
 #
-# Last edited: 2023-03-17
+# Last edited: 2023-04-05
 #
 # Description: Simple text formatting function used for Table 2–4 (Section 6.2–6.4).
 #

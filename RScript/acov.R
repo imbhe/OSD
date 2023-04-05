@@ -4,7 +4,7 @@
 #
 # Author: Henrik Imberg
 #
-# Last edited: 2023-03-17
+# Last edited: 2023-04-05
 #
 # Description: Evaluate approximate covariance matrix (Eq. (7)-(9), Section 2.2).
 #

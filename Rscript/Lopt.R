@@ -4,9 +4,9 @@
 #
 # Author: Henrik Imberg
 #
-# Last edited: 2023-03-20
+# Last edited: 2023-04-05
 #
-# Description:  Find L-optimal sampling scheme using (Algorithm 1, Section 3.3).
+# Description:  Find L-optimal sampling scheme using Algorithm 1, Section 3.3.
 #
 # INPUT: 
 #   - n           subsample size.
