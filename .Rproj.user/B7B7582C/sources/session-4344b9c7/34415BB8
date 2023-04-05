@@ -1,0 +1,26 @@
+{
+    "id": "34415BB8",
+    "path": "~/GitHub/OSD/Rscript/main.R",
+    "project_path": "Rscript/main.R",
+    "type": "r_source",
+    "hash": "3599525885",
+    "contents": "",
+    "dirty": false,
+    "created": 1680677382713.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "493,21",
+        "scrollLine": "320"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1680677405,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1680677405271,
+    "read_only": false,
+    "read_only_alternatives": []
+}
